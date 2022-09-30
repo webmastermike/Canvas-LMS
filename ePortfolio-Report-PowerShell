@@ -1,0 +1,42 @@
+$sourceDir = "c:\some\path\to\CSV\source\" #this is source directory literal path for data source
+$sourceFile = "filename.csv" # name of the data source file to read
+$outputPath = "c:\some\path\to\script\output\folder\" #output path for the report file creation
+$outputFile = "reportFilename.csv" # name of the zip file to create
+$token = "<some_token>" # access_token
+$domain = "<school>.instructure.com"
+
+
+#################################################
+###### Don't edit anything after this line ######
+#################################################
+
+
+$headers = @{"Authorization"="Bearer "+$token}
+$CanvasIDsImportFile = $sourceDir+$sourceFile 
+$output = $outputPath+$outputFile
+$read_canvas_id = @();
+
+If ((test-path $CanvasIDsImportFile)) {
+	$read_canvas_id = Import-CSV -Path $CanvasIDsImportFile
+
+	foreach ($canvas_id in $read_canvas_id) {	
+		$status_url = "https://$domain/api/v1/users/"+$canvas_id.canvas_id+"/eportfolios/"
+		
+        $getResults = try { 
+          (Invoke-WebRequest -Headers $headers -Method get -uri $status_url -UseBasicParsing) 
+        }
+        catch
+        { 
+          $StatusCode = $_.Exception.Response.StatusCode.value__
+        }
+
+        $Results = ($getResults.content | convertfrom-json)
+
+        $importID = $Results.id
+
+        foreach($importID in $Results) {
+           $SpamReport = $importID
+           $SpamReport | Export-CSV $output -Append -NoTypeInformation
+          }
+	}
+}
